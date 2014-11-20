@@ -1,15 +1,27 @@
+// Copyright notice from the original Clojure version of this code:
+// ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; ant sim ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+//
+// ;   Copyright (c) Rich Hickey. All rights reserved.
+// ;   The use and distribution terms for this software are covered by the
+// ;   Common Public License 1.0 (http://opensource.org/licenses/cpl.php)
+// ;   which can be found in the file CPL.TXT at the root of this distribution.
+// ;   By using this software in any fashion, you are agreeing to be bound by
+// ;   the terms of this license.
+// ;   You must not remove this notice, or any other, from this software.
+//
+// Credit also due to Peter Vlugter for his original port in 2009 to Scala 2.8. See https://github.com/pvlugter/ants
+
 package ants
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
 import scala.annotation.tailrec
-import scala.collection.immutable.IndexedSeq
 import scala.concurrent.stm.{Ref, _}
 import scala.math.{max, min}
 import scala.util.Random.{nextInt => randomInt}
 
 case object Ping
 
-class Ants(NantsSqrt: Int, AntSleepMilliseconds: Int, ConsistentWorldSnapshot: Boolean) {
+class AntColonySimulation(NantsSqrt: Int, AntSleepMilliseconds: Int, ConsistentWorldSnapshot: Boolean) {
 
   val NormalSize = NantsSqrt <= 40
   val Dim = if (NormalSize) 80 else max(min(NantsSqrt * 12, 160), 80) // dimensions of square world
@@ -91,9 +103,9 @@ class Ants(NantsSqrt: Int, AntSleepMilliseconds: Int, ConsistentWorldSnapshot: B
     def apply(loc: (Int, Int)) = world(loc._1)(loc._2)
     def snapshot = {
       val ss = if (ConsistentWorldSnapshot) {
-        atomic { implicit txn => for (x <- 0 until Dim; y <- 0 until Dim) yield World(x, y).cell }
+        atomic { implicit txn => for (x <- 0 until Dim; y <- 0 until Dim) yield World(x, y).cell.get.get }
       } else {
-        for (x <- 0 until Dim; y <- 0 until Dim) yield atomic { implicit txn => World(x, y).cell }
+        for (x <- 0 until Dim; y <- 0 until Dim) yield World(x, y).cell.single.get.get
       }
       ss
     }
@@ -214,9 +226,6 @@ class Ants(NantsSqrt: Int, AntSleepMilliseconds: Int, ConsistentWorldSnapshot: B
               moveToRandomCellWeightedByRank(loc, cell => cell.food + cell.pher)
             }
           }
-//      } orAtomic { implicit txn =>
-//        println ("<")
-//        loc
       }
     }
 
@@ -317,8 +326,7 @@ class Ants(NantsSqrt: Int, AntSleepMilliseconds: Int, ConsistentWorldSnapshot: B
       bg.setColor(Color.WHITE)
       bg.fillRect(0, 0, img.getWidth, img.getHeight)
       for (x <- 0 until Dim; y <- 0 until Dim) {
-        // TODO tim new code : can this be more elegant? .single.get.get
-        renderPlace(bg, v(x * Dim + y).single.get.get, x, y)
+        renderPlace(bg, v(x * Dim + y), x, y)
       }
       bg.setColor(Color.BLUE)
       bg.drawRect(scale * HomeOff, scale * HomeOff, scale * HomeSize, scale * HomeSize)
@@ -357,30 +365,31 @@ class Ants(NantsSqrt: Int, AntSleepMilliseconds: Int, ConsistentWorldSnapshot: B
 
 }
 
-object AntRunner {
+object AntSimulationRunner {
 
   def getParams = {
     import javax.swing.JOptionPane
-    val c = Seq("Yes", "No", "No idea!").toArray[Object]
-    def getParam(question: String, options: Seq[String], defaultValue: Object): Int = {
-      val dialogResult: AnyRef = JOptionPane.showInputDialog(
-        null, question, "Ants", JOptionPane.PLAIN_MESSAGE, null, options.toArray[Object], defaultValue)
+    def question(question: String, options: Seq[String], defaultValue: String): Int = {
+      JOptionPane.showOptionDialog(
+      null, question, "Ants", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, options.toArray[Object], defaultValue)
+    }
+    def getParam(question: String, options: Seq[String], defaultValue: Object) = {
+      val dialogResult = JOptionPane.showInputDialog(
+        null, question, "Ants", JOptionPane.QUESTION_MESSAGE, null, options.toArray[Object], defaultValue)
       if (dialogResult == null) throw new RuntimeException("Bye")
       dialogResult.asInstanceOf[String].toInt
     }
-    val n = getParam("How many ants?", (1 to 100) map (v => (v * v).toString), "49");
-    val antSleepMilliseconds = getParam("Ant millisecond sleep time?", ((0 to 40) map (v => v.toString)), "40");
-    val consistent = JOptionPane.showOptionDialog(
-      null, "Draw screen with consistent world snapshot as per clojure version?", "Ants", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, c, c(2))
+    val numberOfAnts = getParam("How many ants?", 1 to 100 map (v => (v * v).toString), "49");
+    val antSleepMilliseconds = getParam("Ant millisecond sleep time?", 0 to 40 map (_.toString), "40");
+    val consistent = question("Draw screen with consistent world snapshot as per clojure version?", Seq("Yes", "No", "No idea!"), "Yes")
 
-    import scala.math.sqrt
-    (sqrt(n).toInt, antSleepMilliseconds, consistent == 0)
+    (scala.math.sqrt(numberOfAnts).toInt, antSleepMilliseconds, consistent == 0)
   }
 
   def main(args: Array[String]) {
 
-    val (nantsSqrt, antSleepMilliseconds, consistent) = getParams
-    val antSimulation = new Ants(nantsSqrt, antSleepMilliseconds, consistent)
+    val (sqrtOfNumberOfAnts, antSleepMilliseconds, consistent) = getParams
+    val antSimulation = new AntColonySimulation(sqrtOfNumberOfAnts, antSleepMilliseconds, consistent)
     antSimulation.World.start
 
   }
