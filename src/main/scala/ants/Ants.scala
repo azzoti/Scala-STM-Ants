@@ -2,13 +2,14 @@ package ants
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
 import scala.annotation.tailrec
+import scala.collection.immutable.IndexedSeq
 import scala.concurrent.stm.{Ref, _}
 import scala.math.{max, min}
 import scala.util.Random.{nextInt => randomInt}
 
 case object Ping
 
-class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
+class Ants(NantsSqrt: Int, AntSleepMilliseconds: Int, ConsistentWorldSnapshot: Boolean) {
 
   val NormalSize = NantsSqrt <= 40
   val Dim = if (NormalSize) 80 else max(min(NantsSqrt * 12, 160), 80) // dimensions of square world
@@ -18,10 +19,11 @@ class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
   val FoodRange = 100 // range of amount of food at a place
   val FoodScale = 30.0 // scale factor for food drawing
   val PherScale = 20 // scale factor for pheromone drawing
-  val EvapMillis = 1000 // how often pheromone evaporation occurs (milliseconds)
-  val EvapRate = 0.99f // pheromone evaporation rate
+  val EvapMillis = 100 // how often pheromone evaporation occurs (milliseconds)
+  val fudge : Float = if (AntSleepMilliseconds==0) 0.05f else AntSleepMilliseconds.toFloat
+  val EvapRate = 0.999f - ((40 / fudge) - 1) / 1000.0f // pheromone evaporation rate
   val AnimationSleepMs = 100 // 10 frames per second
-  val AntMillis = 40 // ant pause
+  val AntMillis = AntSleepMilliseconds // ant pause
 
   // We could have also used akka HashTries instead of a Scala case class which 
   // would be a more direct translation of the clojure implementation 
@@ -42,11 +44,10 @@ class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
     val cell: Ref[Some[Cell]] = Ref(Some(Cell()))
     def cellValue = cell.single.get.get // atomic { implicit txn =>  theCell().get }
     def ant = cellValue.ant.get
-    def transformCell2(f: Cell => Cell) = cell.single.transformAndGet { someCell => Some(f(someCell.get)) }
     def transformCell(f: Cell => Cell) = cell.single.transformAndGet { someCell => Some(f(someCell.get)) }
     def addAnt(ant: Ant) = transformCell(_.withAnt(ant))
     def changeAnt(f: Ant => Ant) = transformCell(cell => cell.withAnt(f(cell.ant.get)))
-    def removeAnt = transformCell(_.withoutAnt)
+    def removeAnt(): Some[Cell] = transformCell(_.withoutAnt)
     def changeFood(f: Int => Int) = transformCell(_.withFood(f))
     def makeHome = transformCell(_.copy(home = true))
     def occupied = cellValue.occupied
@@ -66,7 +67,7 @@ class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
     // places initial food and ants, returns seq of ActorRef
     def setup: Seq[ActorRef] = {
       for (i <- 1 to FoodPlaces) {
-        World(randomInt(Dim), randomInt(Dim)) changeFood (oldfood => randomInt(FoodRange))
+        World(randomInt(Dim), randomInt(Dim)) changeFood (oldFood => randomInt(FoodRange))
       }
       val homeRange = HomeOff until (HomeSize + HomeOff)
       for (x <- homeRange; y <- homeRange) {
@@ -82,8 +83,8 @@ class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
     //
     private lazy val ants = setup
 
-    private lazy val animator = system.actorOf(Props(new Animator).withDispatcher("akka.actor.animator-dispatcher"), "Animator")
-    //private lazy val animator = system.actorOf(Props(new Animator), "Animator")
+    //private lazy val animator = system.actorOf(Props(new Animator).withDispatcher("akka.actor.animator-dispatcher"), "Animator")
+    private lazy val animator = system.actorOf(Props(new Animator), "Animator")
     private lazy val evaporator = system.actorOf(Props(new Evaporator), "Evaporator")
     private lazy val world = Array.fill(Dim, Dim)(new CellRef)
     //
@@ -99,15 +100,13 @@ class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
 
     def start = {
 
-
-      //animator.start
-      //evaporator.start
-      ants foreach (_ ! "start")
-
       import scala.concurrent.duration._
+      // Start the animator and the pheromone evaporator
       system.scheduler.schedule(1.seconds, AnimationSleepMs.milliseconds, animator, Ping)(system.dispatcher, animator)
       system.scheduler.schedule(1.seconds, EvapMillis.milliseconds, evaporator , Ping)(system.dispatcher, evaporator)
 
+      // Ping each ant to get it started
+      ants foreach (_ ! Ping)
 
     }
   }
@@ -160,9 +159,9 @@ class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
     import Util._
 
     def receive = {
-      case "start" => self ! initLoc
+      case Ping => self ! initLoc
       case loc: (Int, Int) => {
-        //Thread.sleep(AntMillis)
+        if (AntMillis > 0) Thread.sleep(AntMillis)
         self ! behave(loc)
       }
       case _ => println("received unknown message")
@@ -226,12 +225,12 @@ class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
     def move(loc: (Int, Int)) = {
       val from = World(loc)
       val ant = from.ant
-      val newloc = deltaLoc(loc, ant.dir)
-      val to = World(newloc)
+      val newLocation = deltaLoc(loc, ant.dir)
+      val to = World(newLocation)
       from.removeAnt
       to.addAnt(ant)
       if (!from.home) from pher (1.0f+)
-      newloc
+      newLocation
     }
 
     //  "Takes one food from current location. Must be called in a
@@ -309,9 +308,7 @@ class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
     }
 
     def render(g: Graphics) = {
-      print("<")
       val v = World.snapshot
-      print(">")
       if (v.size == 0) {
         println("No world to render")
       }
@@ -347,77 +344,49 @@ class Ants02(NantsSqrt: Int, ConsistentWorldSnapshot: Boolean) {
       if (iconUrl != null) f.setIconImage(new ImageIcon(iconUrl).getImage())
       f.addWindowListener(new WindowAdapter() {
         override def windowClosing(winEvt: WindowEvent) {
-          // TODO something a bit cleaner?
           System.exit(0)
         }
       });
     }
 
-//    var count = 1
-
     override def receive = {
       case Ping =>
-        // try { 
-        // Thread.sleep(AnimationSleepMs)
-//        println(count)
-//        count += 1
         panel.repaint()
-      // self ! Ping
-      //        } catch {
-      //        	case ie: InterruptedException => /* shutting down*/
-      //    	}
     }
   }
 
 }
 
-object AntRunner2 {
+object AntRunner {
 
-  def howManyAnts = {
+  def getParams = {
     import javax.swing.JOptionPane
-    val p = ((1 to 100) map (v => (v * v).toString)).toArray[Object]
+    val antNumbers: IndexedSeq[String] = (1 to 100) map (v => (v * v).toString)
     val c = Seq("Yes", "No", "No idea!").toArray[Object]
-    val n = JOptionPane.showInputDialog(
-      null, "How many ants?", "Ants", JOptionPane.PLAIN_MESSAGE, null, p, p(3));
-    if (n == null) throw new RuntimeException("Bye")
+    def getParam(question: String, title: String, options: Seq[String], defaultValue: Object): String = {
+      val s1 = options.toArray[Object]
+      val dialogResult: AnyRef = JOptionPane.showInputDialog(
+        null, question, title, JOptionPane.PLAIN_MESSAGE, null, s1, defaultValue)
+      if (dialogResult == null) throw new RuntimeException("Bye")
+      dialogResult.asInstanceOf[String]
+    }
+    val n = getParam("How many ants?", "Ants", antNumbers, antNumbers(6));
+    val antSleepMilliseconds = getParam("Ant millisecond sleep time?", "Ants", ((0 to 100) map (v => v.toString)), "40");
     val consistent = JOptionPane.showOptionDialog(
       null, "Draw screen with consitent world snapshot as per clojure version?", "Ants", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, c, c(2))
 
     import scala.math.sqrt
-    (sqrt(n.asInstanceOf[String].toDouble).toInt, consistent == 0)
+    (sqrt(n.toInt).toInt, antSleepMilliseconds.toInt, consistent == 0)
   }
 
   def main(args: Array[String]) {
     println("AntRunner2")
 
-    val (nantsSqrt, consistent) =
+    val (nantsSqrt, antSleepMilliseconds, consistent) =
     // (10, true)
-      howManyAnts
-    val ants02 = new Ants02(nantsSqrt, consistent)
-    ants02.World.start
+      getParams
+    val antSimulation = new Ants(nantsSqrt, antSleepMilliseconds, consistent)
+    antSimulation.World.start
 
-    //    //val a: Array[Array[ants02.CellRef]] = ants02.foo()
-    //    val b: ants02.CellRef = a(1)(1)
-    //    println(b.cellValue)
-    //    b.addAnt(ants02.Ant(randomInt(8)))
-    //    println(b.cellValue)
-    //    b.changeAnt((_.turn(1)))
-    //    println(b.cellValue)
-    //    b.changeAnt((_.turn(1)))
-    //    println(b.cellValue)
-    //    b.removeAnt
-    //    println(b.cellValue)
-    //    b.changeFood(_ + 1)
-    //    println(b.cellValue)
-    //    b.changeFood(_ + 1)
-    //    println(b.cellValue)
-    //    b.pherIfNonZero(_ + 1.123f)
-    //    println(b.cellValue)
-    //    b.pherIfNonZero(_ + 1.123f)
-    //    println(b.cellValue)
-    //    b.pher(_ + 1.123f)
-    //    println(b.cellValue)
-    //    b.pherIfNonZero(_ + 1.123f)
-    //    println(b.cellValue)
   }
 }
