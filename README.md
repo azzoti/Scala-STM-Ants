@@ -1,5 +1,5 @@
-Ants
-====
+Scala Ant Colony Simulation based on Ant colony simulation in Clojure
+=====================================================================
 
 This project is a port to Scala 2.11 of the 2009 [Ant colony simulation in Clojure][clojure-ants-video] from a [talk by Rich Hickey][clojure-ants-talk] : original clojure source [here][ants.clj.1] or [here][ants.clj.2].
 (According to this [thread][clojure-ants-dated], the clojure code is rather dated so a version updated to clojure 1.4 is suggested [here][ants.clj.3]).
@@ -13,17 +13,17 @@ Features of the clojure ants simulation:
 - There is a clojure "evaporator" agent that evaporates the pheromones left by the foraging ants.
 - The code is *implicitly* multi threaded and in principle can use all available processors to access shared state using clojure's [controlled STM semantics][clojure-concurrent_programming].
 
-Features of this port:
+Features of this scala version:
 
-- Uses the [Scala STM][scala-stm] and [Akka actors][akka] instead of clojure agents.
-- The scala algorithm follows the clojure implementation very closely.
-- On startup, the application allows you to select the number of ants to use, the ant sleep time, and whether the animator should "stop-the-world" to get a consistent world view.
-- Scala STM has a "Ref" class for managing shared state between threads as a direct analog to Clojure Ref type.
-- Scala does not have a direct equivalent of Clojure agents, so Akka actors are used in a similar way to the clojure agents.
+- It uses the [Scala STM][scala-stm] and [Akka actors][akka] instead of clojure agents.
+- It follows the clojure implementation very closely.
+- It  uses the Scala STM "Ref" class for managing shared state - this is a direct analog of Clojure "Ref" type.
+- Scala does not have a direct equivalent of Clojure agents, so Akka "Actors" are used in a similar way to the clojure agents.
   (This is _not_ an idiomatic usage of Akka actors. Conceptually "Actors" are intended never to share state and only communicate using message passing.)
-- The code is *implicitly* multi threaded and in principle can use all available processors.
+- The code is *implicitly* multi threaded and uses all available processors. (This can be seen if you set the ant sleep time to zero on startup).
+- On startup, the application allows you to select the number of ants to use, the ant sleep time, and whether the animator should "stop-the-world" to get a consistent world view.
 - For reasons I haven't tried to understand, Akka's default fork-join-executor actor dispatcher does not allow the "animator" actore any processing time,
-  when more than 16 ants are used. So to make it work for any number of ants, I have switched the default dispatcher to use a "thread-pool-executor" and everything works beautifully
+  when more than 16 ants are used. So to make it work for any number of ants, the default dispatcher has bee set to use a "thread-pool-executor" and everything works beautifully
 
 
 Credits
