@@ -361,30 +361,25 @@ object AntRunner {
 
   def getParams = {
     import javax.swing.JOptionPane
-    val antNumbers: IndexedSeq[String] = (1 to 100) map (v => (v * v).toString)
     val c = Seq("Yes", "No", "No idea!").toArray[Object]
-    def getParam(question: String, title: String, options: Seq[String], defaultValue: Object): String = {
-      val s1 = options.toArray[Object]
+    def getParam(question: String, options: Seq[String], defaultValue: Object): Int = {
       val dialogResult: AnyRef = JOptionPane.showInputDialog(
-        null, question, title, JOptionPane.PLAIN_MESSAGE, null, s1, defaultValue)
+        null, question, "Ants", JOptionPane.PLAIN_MESSAGE, null, options.toArray[Object], defaultValue)
       if (dialogResult == null) throw new RuntimeException("Bye")
-      dialogResult.asInstanceOf[String]
+      dialogResult.asInstanceOf[String].toInt
     }
-    val n = getParam("How many ants?", "Ants", antNumbers, antNumbers(6));
-    val antSleepMilliseconds = getParam("Ant millisecond sleep time?", "Ants", ((0 to 100) map (v => v.toString)), "40");
+    val n = getParam("How many ants?", (1 to 100) map (v => (v * v).toString), "49");
+    val antSleepMilliseconds = getParam("Ant millisecond sleep time?", ((0 to 100) map (v => v.toString)), "40");
     val consistent = JOptionPane.showOptionDialog(
-      null, "Draw screen with consitent world snapshot as per clojure version?", "Ants", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, c, c(2))
+      null, "Draw screen with consistent world snapshot as per clojure version?", "Ants", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, c, c(2))
 
     import scala.math.sqrt
-    (sqrt(n.toInt).toInt, antSleepMilliseconds.toInt, consistent == 0)
+    (sqrt(n).toInt, antSleepMilliseconds, consistent == 0)
   }
 
   def main(args: Array[String]) {
-    println("AntRunner2")
 
-    val (nantsSqrt, antSleepMilliseconds, consistent) =
-    // (10, true)
-      getParams
+    val (nantsSqrt, antSleepMilliseconds, consistent) = getParams
     val antSimulation = new Ants(nantsSqrt, antSleepMilliseconds, consistent)
     antSimulation.World.start
 
