@@ -369,7 +369,7 @@ object AntRunner {
       dialogResult.asInstanceOf[String].toInt
     }
     val n = getParam("How many ants?", (1 to 100) map (v => (v * v).toString), "49");
-    val antSleepMilliseconds = getParam("Ant millisecond sleep time?", ((0 to 100) map (v => v.toString)), "40");
+    val antSleepMilliseconds = getParam("Ant millisecond sleep time?", ((0 to 40) map (v => v.toString)), "40");
     val consistent = JOptionPane.showOptionDialog(
       null, "Draw screen with consistent world snapshot as per clojure version?", "Ants", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, c, c(2))
 
