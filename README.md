@@ -27,30 +27,17 @@ Features of this port:
 
 
 Credits
+-------
+
 Rich Hickey
 (Credit also to to Peter Vlugter for the [original port][peter-ants] in 2009 to Scala 2.8)
 
-[clojure-ants-video]:https://www.youtube.com/watch?v=shm7QcJMvig
-[clojure-ants-talk]:http://youtu.be/dGVqrGmwOAw
-[ants.clj.1]:https://www.refheap.com/3096
-[ants.clj.2]:http://www.lisptoronto.org/past-meetings/2009-05-clojure-ants-demo/ants.clj?attredirects=0&d=1
-[clojure-ants-dated]:http://grokbase.com/t/gg/clojure/125x7j5mg5/is-still-idiomatic-the-ant-simulation-code
-[ants.clj.3]:https://www.refheap.com/3099
-[peter-ants]:http://github.com/pvlugter/ants
-[ants]:http://grokbase.com/t/gg/clojure/125x7j5mg5/is-still-idiomatic-the-ant-simulation-code
-[scala-stm]:http://nbronson.github.io/scala-stm/
-[akka]:http://akka.io/
-[clojure-concurrent_programming]:http://clojure.org/concurrent_programming
 
 
 Requirements
 ------------
 
-To build and run Ants you need [Simple Build Tool][sbt] (sbt). I used SBT version 0.7.3.
-
-[sbt]: http://code.google.com/p/simple-build-tool/
-
-
+To build and run Ants you need [sbt Simple Build Tool][sbt]
 
 
 
@@ -70,7 +57,7 @@ To run Ants use "sbt run":
 Notice
 ------
 
-This project is based on the Clojure ants simulation by Rich Hickey.
+Project based on the Clojure ants simulation by Rich Hickey.
 
 Copyright (c) Rich Hickey. All rights reserved.
 The use and distribution terms for this software are covered by the
@@ -81,3 +68,16 @@ the terms of this license.
 You must not remove this notice, or any other, from this software.
 
 [cpl]: http://opensource.org/licenses/cpl1.0.php
+[sbt]: http://www.scala-sbt.org/
+[clojure-ants-video]:https://www.youtube.com/watch?v=shm7QcJMvig
+[clojure-ants-talk]:http://youtu.be/dGVqrGmwOAw
+[ants.clj.1]:https://www.refheap.com/3096
+[ants.clj.2]:http://www.lisptoronto.org/past-meetings/2009-05-clojure-ants-demo/ants.clj?attredirects=0&d=1
+[clojure-ants-dated]:http://grokbase.com/t/gg/clojure/125x7j5mg5/is-still-idiomatic-the-ant-simulation-code
+[ants.clj.3]:https://www.refheap.com/3099
+[peter-ants]:http://github.com/pvlugter/ants
+[ants]:http://grokbase.com/t/gg/clojure/125x7j5mg5/is-still-idiomatic-the-ant-simulation-code
+[scala-stm]:http://nbronson.github.io/scala-stm/
+[akka]:http://akka.io/
+[clojure-concurrent_programming]:http://clojure.org/concurrent_programming
+
