@@ -1,0 +1,17 @@
+<classpath>
+  <classpathentry kind="src" path="src\main\scala"/>
+  <classpathentry kind="src" path="src\main\java"/>
+  <classpathentry kind="src" path="src\main\resources"/>
+  <classpathentry kind="src" path="src\test\scala"/>
+  <classpathentry kind="src" path="src\test\java"/>
+  <classpathentry kind="src" path="src\test\resources"/>
+  <classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
+  <classpathentry kind="lib" path="C:\Users\azzoti\.ivy2\cache\org.scala-stm\scala-stm_2.11\jars\scala-stm_2.11-0.7.jar"/>
+  <classpathentry kind="lib" path="C:\Users\azzoti\.ivy2\cache\com.typesafe.akka\akka-actor_2.11\jars\akka-actor_2.11-2.3.7.jar"/>
+  <classpathentry kind="lib" path="C:\Users\azzoti\.ivy2\cache\com.typesafe\config\bundles\config-1.2.1.jar"/>
+  <classpathentry kind="lib" path="C:\Users\azzoti\.ivy2\cache\com.typesafe.akka\akka-slf4j_2.11\jars\akka-slf4j_2.11-2.3.7.jar"/>
+  <classpathentry kind="lib" path="C:\Users\azzoti\.ivy2\cache\org.slf4j\slf4j-api\jars\slf4j-api-1.7.7.jar"/>
+  <classpathentry kind="lib" path="C:\Users\azzoti\.ivy2\cache\org.slf4j\slf4j-simple\jars\slf4j-simple-1.7.7.jar"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="output" path="bin"/>
+</classpath>
